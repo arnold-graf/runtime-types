@@ -3,7 +3,7 @@
 // TODO FEATURE support nested objects
 
 import type {Type, Property, ObjectMap} from './types'
-import {flatten, extend, constant, find} from 'lodash'
+import {extend} from 'lodash'
 
 export type Validator<T> = (value:T) => ValidationResult
 export type ValidationError = string;
@@ -11,7 +11,7 @@ export type ValidationError = string;
 // use === true to test
 export type ValidationResult = boolean | ValidationError;
 
-export type ValidatorMap = {[key:string]:Validator}
+export type ValidatorMap = {[key:string]:Validator<any>}
 
 export type ValidateObject = (value:Object) => Array<KeyedError>
 
@@ -21,7 +21,7 @@ export type KeyedError = {
   error: ValidationError;
 }
 
-type KeyedValidator = [string, Validator];
+type KeyedValidator = [string, Validator<any>];
 
 
 // -------------------------------------------------------------
@@ -53,6 +53,7 @@ var VALIDATORS_BY_TYPE:ValidatorMap = {
   "boolean" : validateTypeOf("boolean"),
   "Date"    : validateInstanceOf(Date),
   "Object"  : validateExists(),
+  "Array"   : validateArray(),
 }
 
 function validateAll(vs:Array<KeyedValidator>, obj:Object):Array<KeyedError> {
@@ -160,25 +161,31 @@ function objToValidators(map:ValidatorMap, props:Array<Property>):Array<KeyedVal
 // Validators
 //////////////////////////////////////////////////////////////
 
-export function validateExists():Validator {
+export function validateExists():Validator<any> {
   return function(val) {
     return exists(val) || "missing"
   }
 }
 
-export function validateTypeOf(type:string):Validator {
+export function validateTypeOf(type:string):Validator<any> {
   return function(val) {
     return (typeof val === type) || "expected typeof " + type
   }
 }
 
-export function validateInstanceOf(func:Function):Validator {
+export function validateArray():Validator<any> {
+  return function(val) {
+    return (Array.isArray(val) || "expected array")
+  }
+}
+
+export function validateInstanceOf(func:Function):Validator<any> {
   return function(val) {
     return (val instanceof func) || "expected instance of " + func.name
   }
 }
 
-export function validateRegex(regex:RegExp):Validator {
+export function validateRegex(regex:RegExp):Validator<any> {
   return function(val) {
     return (regex.test(val)) || "did not match " + regex.toString()
   }
@@ -187,4 +194,3 @@ export function validateRegex(regex:RegExp):Validator {
 function exists(value):boolean {
   return !(value === undefined || value === null)
 }
-

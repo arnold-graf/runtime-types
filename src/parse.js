@@ -2,12 +2,12 @@
 // https://github.com/estree/estree/blob/master/spec.md
 
 var esprima = require('esprima-fb')
-var path = require('path')
-var lodash = require('lodash')
-var {assign, curry} = lodash
+// var path = require('path')
+// var lodash = require('lodash')
+// var {assign, curry} = lodash
 var fs = require('fs')
 
-import type {Type, Property, ObjectMap} from './types'
+import type {ObjectMap, Property, Type} from './types'
 
 
 //////////////////////////////////////////////////////////////
@@ -293,4 +293,4 @@ type SyntaxTokens = {
   VoidTypeAnnotation: string;
 }
 
-var Syntax:SyntaxTokens  = esprima.Syntax
+var Syntax:SyntaxTokens = esprima.Syntax

@@ -10,13 +10,13 @@ var VALIDATORS:ValidatorMap = {
   PhoneNumber: validateRegex(/^\d{10}$/),
 }
 
-function validateAnyGUID():Validator {
+function validateAnyGUID():Validator<any> {
   return function(guid) {
     return true
   }
 }
 
-function validatePhoneNumber():Validator {
+function validatePhoneNumber():Validator<any> {
   return function(phone:PhoneNumber) {
     if (phone.length != 9) {
       return "invalid phone number: " + phone
