@@ -2,10 +2,11 @@
 // https://github.com/estree/estree/blob/master/spec.md
 
 var esprima = require('esprima-fb')
-// var path = require('path')
+var path = require('path')
 // var lodash = require('lodash')
 // var {assign, curry} = lodash
 var fs = require('fs')
+var _ = require('lodash')
 
 import type {ObjectMap, Property, Type} from './types'
 
@@ -20,7 +21,8 @@ import type {ObjectMap, Property, Type} from './types'
 // you should run this when your program starts
 
 export function readFile(filepath:string):ObjectMap<Type> {
-  return findTypes(parseFile(filepath))
+  // console.log(require('util').inspect(findTypes(parseFile(filepath)), { depth: null }));
+  return findTypes(parseFile(filepath), filepath)
 }
 
 function parseFile(filepath:string):Tree {
@@ -31,26 +33,47 @@ function parseFile(filepath:string):Tree {
   return esprima.parse(data.toString(), {tolerant:true})
 }
 
-function findTypes(tree:Tree):ObjectMap<Type> {
-  //console.log("DATA", tree.body)
-  var aliases:Array<?TypeAlias> = tree.body.map(function(s:$Subtype<AnySyntax>) {
-
+function treeToTypes(tree:Tree, filepath:string, paths):Array<?TypeAlias> {
+  var all_paths = (paths || []).concat(path.normalize(filepath))
+  console.log('all_paths',all_paths)
+  return _(tree.body).map((s) => {
+    // new import declarations: recursion.
+    if (s.type == "ImportDeclaration" && s.importKind == "type") {
+      var import_path = path.normalize(path.dirname(filepath) + '/' + s.source.value + '.js')
+      if (all_paths.indexOf(import_path) > -1) {
+        return []
+      }else{
+        return treeToTypes(parseFile(import_path), import_path, all_paths)
+      }
+      // TODO: OTHER EXTENSIONS THAN JS
+    }
     if (s.type == "ExportDeclaration") {
       var ex:ExportDeclaration = (s : any)
       s = ex.declaration
     }
-
     if (s.type == "TypeAlias") {
       return s
     }
   })
+  .flattenDeep()
+  .value()
+}
 
-  return aliases.reduce(function(values, alias:?TypeAlias) {
+function findTypes(tree:Tree, filepath:string):ObjectMap<Type> {
+  // console.log(require('util').inspect(tree.body, { depth: null }));
+
+  var aliases:Array<?TypeAlias> = treeToTypes(tree, filepath)
+
+  // console.log('ALIASES',require('util').inspect(aliases, { depth: null }))
+
+  var reduced =  _.reduce(aliases, (values, alias:?TypeAlias) => {
     if (alias) {
       values[alias.id.name] = toType(alias.right)
     }
     return values
   }, {})
+  // console.log(require('util').inspect(reduced, { depth: null }));
+  return reduced
 }
 
 function toProperty(prop:TypeProperty):Property {
