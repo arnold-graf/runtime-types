@@ -1,12 +1,10 @@
 // @flow
 // https://github.com/estree/estree/blob/master/spec.md
 
-var esprima = require('esprima-fb')
 var path = require('path')
-// var lodash = require('lodash')
-// var {assign, curry} = lodash
 var fs = require('fs')
 var _ = require('lodash')
+var flow_parser = require('flow-parser')
 
 import type {ObjectMap, Property, Type} from './types'
 
@@ -27,15 +25,21 @@ export function readFile(filepath:string):ObjectMap<Type> {
 
 function parseFile(filepath:string):Tree {
   var data = fs.readFileSync(filepath).toString()
+
+  // TODO: IS THIS EVEN NEEDED IN FLOW_PARSE?
   // Strip 'declare export' statements from Flow 0.19, which aren't supported by esprima.
   // They're not useful to us anyway.
   data = data.replace(/declare export .*?(?:\n|$)/ig, '')
-  return esprima.parse(data.toString(), {tolerant:true})
+
+  var ast = flow_parser.parse(data.toString(), {})
+  // console.log(require('util').inspect(ast, { depth: null }))
+  return ast
 }
 
 function treeToTypes(tree:Tree, filepath:string, paths):Array<?TypeAlias> {
   var all_paths = (paths || []).concat(path.normalize(filepath))
   console.log('all_paths',all_paths)
+  // console.log(require('util').inspect(tree, { depth: null }));
   return _(tree.body).map((s) => {
     // new import declarations: recursion.
     if (s.type == "ImportDeclaration" && s.importKind == "type") {
@@ -47,7 +51,7 @@ function treeToTypes(tree:Tree, filepath:string, paths):Array<?TypeAlias> {
       }
       // TODO: OTHER EXTENSIONS THAN JS
     }
-    if (s.type == "ExportDeclaration") {
+    if (s.type == "ExportNamedDeclaration") {
       var ex:ExportDeclaration = (s : any)
       s = ex.declaration
     }
@@ -66,7 +70,7 @@ function findTypes(tree:Tree, filepath:string):ObjectMap<Type> {
 
   // console.log('ALIASES',require('util').inspect(aliases, { depth: null }))
 
-  var reduced =  _.reduce(aliases, (values, alias:?TypeAlias) => {
+  var reduced = _.reduce(aliases, (values, alias:?TypeAlias) => {
     if (alias) {
       values[alias.id.name] = toType(alias.right)
     }
@@ -81,36 +85,33 @@ function toProperty(prop:TypeProperty):Property {
     key: prop.key.name,
     type: toType(prop.value),
   }
-
   if (prop.optional) {
     p.optional = true
   }
-
   return p
 }
 
 function toType(anno:TypeAnnotation):Type {
 
-  if (anno.type === Syntax.ObjectTypeAnnotation) {
+  if (anno.type === "ObjectTypeAnnotation") {
     return objectType((anno : any))
   }
 
-  else if (anno.type === Syntax.GenericTypeAnnotation) {
+  else if (anno.type === "GenericTypeAnnotation") {
     return genericType((anno : any))
   }
 
-  else if (anno.type === Syntax.NullableTypeAnnotation) {
+  else if (anno.type === "NullableTypeAnnotation") {
     return nullableType((anno : any))
   }
 
-  else if (anno.type === Syntax.StringLiteralTypeAnnotation) {
+  else if (anno.type === "StringLiteralTypeAnnotation") {
     return literalType((anno : any))
   }
 
-  else if (anno.type === Syntax.UnionTypeAnnotation) {
+  else if (anno.type === "UnionTypeAnnotation") {
     return unionType((anno : any))
   }
-
   else {
     return valueType(anno)
   }
@@ -129,7 +130,9 @@ function genericType(anno:GenericTypeAnnotation):Type {
 
 function objectType(anno:ObjectTypeAnnotation):Type {
   var type = (emptyType('Object') : any)
-  type.properties = anno.properties.map(toProperty)
+  type.properties = anno.properties.map((prop) => {
+    return toProperty(prop)
+  })
   return type
 }
 
@@ -180,19 +183,19 @@ function emptyType(name:string):Type {
 
 function shortName(anno:TypeAnnotation):string {
 
-  if (anno.type === Syntax.StringTypeAnnotation) {
+  if (anno.type === "StringTypeAnnotation") {
     return 'string'
   }
 
-  else if (anno.type === Syntax.NumberTypeAnnotation) {
+  else if (anno.type === "NumberTypeAnnotation") {
     return 'number'
   }
 
-  else if (anno.type === Syntax.BooleanTypeAnnotation) {
+  else if (anno.type === "BooleanTypeAnnotation") {
     return 'boolean'
   }
 
-  else if (anno.type === Syntax.AnyTypeAnnotation) {
+  else if (anno.type === "AnyTypeAnnotation") {
     return 'any'
   }
 
@@ -200,31 +203,22 @@ function shortName(anno:TypeAnnotation):string {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
 //////////////////////////////////////////////////////////////
 // Type description of what esprima returns
 //////////////////////////////////////////////////////////////
 
 type Tree = {
-  type: string;
-  body: Array<AnySyntax>;
+  type: string,
+  body: Array<AnySyntax>
 }
 
 type AnySyntax = TypeAlias | ExportDeclaration;
 
 type ExportDeclaration = {
-  type: string;
-  declaration: AnySyntax;
+  type: string,
+  declaration: AnySyntax,
+  importKind?: string,
+  source?: ObjectMap<any>
 }
 
 type TypeAlias = {
@@ -294,26 +288,3 @@ type UnionTypeAnnotation = {
   type: "UnionTypeAnnotation";
   types: TypeAnnotation[];
 }
-
-//////////////////////////////////////////////////////////////////
-
-type SyntaxTokens = {
-  AnyTypeAnnotation: string;
-  ArrayTypeAnnotation: string;
-  BooleanTypeAnnotation: string;
-  FunctionTypeAnnotation: string;
-  GenericTypeAnnotation: string;
-  IntersectionTypeAnnotation: string;
-  NullableTypeAnnotation: string;
-  NumberTypeAnnotation: string;
-  ObjectTypeAnnotation: string;
-  StringLiteralTypeAnnotation: string;
-  StringTypeAnnotation: string;
-  TupleTypeAnnotation: string;
-  TypeAnnotation: string;
-  TypeofTypeAnnotation: string;
-  UnionTypeAnnotation: string;
-  VoidTypeAnnotation: string;
-}
-
-var Syntax:SyntaxTokens = esprima.Syntax
