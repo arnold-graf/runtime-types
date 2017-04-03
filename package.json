@@ -17,9 +17,9 @@
   "main": "build/index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/seanhess/runtime-types.git"
+    "url": "https://github.com/arnold-graf/runtime-types.git"
   },
-  "homepage": "https://github.com/seanhess/runtime-types",
+  "homepage": "https://github.com/arnold-graf/runtime-types",
   "scripts": {
     "prepublish": "npm run build",
     "test": "babel-node test/example.js",
@@ -28,6 +28,10 @@
   "author": {
     "name": "Sean Hess",
     "url": "http://seanhess.github.io"
+  },
+  "contributors": {
+    "name": "Arnold Graf",
+    "email": "arni@recordbird.com"
   },
   "license": "MIT",
   "dependencies": {
