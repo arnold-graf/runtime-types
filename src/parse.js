@@ -43,10 +43,11 @@ function treeToTypes(tree:Tree, filepath:string, paths):Array<?TypeAlias> {
   return _(tree.body).map((s) => {
     // new import declarations: recursion.
     if (s.type == "ImportDeclaration" && s.importKind == "type") {
-      var import_path = path.normalize(path.dirname(filepath) + '/' + s.source.value + '.js')
+      var import_path = path.normalize(`${path.dirname(filepath)}/${s.source.value}.js`)
       if (all_paths.indexOf(import_path) > -1) {
         return []
       }else{
+        // RECURSION:
         return treeToTypes(parseFile(import_path), import_path, all_paths)
       }
       // TODO: OTHER EXTENSIONS THAN JS
@@ -107,6 +108,14 @@ function toType(anno:TypeAnnotation):Type {
 
   else if (anno.type === "StringLiteralTypeAnnotation") {
     return literalType((anno : any))
+  }
+
+  else if (anno.type === "BooleanLiteralTypeAnnotation") {
+    return literalType((anno : any))
+  }
+
+  else if (anno.type === "NumberLiteralTypeAnnotation") {
+    return literalType(((anno : any)))
   }
 
   else if (anno.type === "UnionTypeAnnotation") {
@@ -214,11 +223,15 @@ type Tree = {
 
 type AnySyntax = TypeAlias | ExportDeclaration;
 
+type ExportSource = {
+  value: string
+}
+
 type ExportDeclaration = {
   type: string,
   declaration: AnySyntax,
   importKind?: string,
-  source?: ObjectMap<any>
+  source: ExportSource
 }
 
 type TypeAlias = {
@@ -226,6 +239,7 @@ type TypeAlias = {
   id: Identifier;
   typeParameters: ?TypeParameters;
   right: TypeAnnotation;
+  source: ExportSource
 }
 
 type TypeProperty = {
