@@ -32,12 +32,7 @@ var validatePrimitives = {
 
 var validateObject = (contextTypes, type, value) => {
   return _.map(type.properties, (prop) => {
-
-    // console.log('PROP TYPE');
-    // debug(prop)
-    // console.log('PROP VALUE');
-    // debug(value)
-
+    // THESE ARE NECESSARY BECAUSE OF THE AST-STRUCTURE.
     // it’s optional and missing => ok
     if (prop.optional === true && isUndefined(value[prop.key])) {
       return true
