@@ -115,13 +115,9 @@ var validate = (contextTypes, typename, value, type) => {
   } else if (contextTypes[typename]) {
     type = contextTypes[typename]
   }
-  // if (typename) {
-  //   console.log('TYPENAME',typename);
-  // }
-  console.log('TYPE:', type)
-  // debug(type)
-  console.log('VALUE:',value)
-  // debug()
+
+  // console.log('TYPE:', type)
+  // console.log('VALUE:',value)
 
   // EXISTENTIAL CHECKS
 
@@ -168,8 +164,14 @@ var validate = (contextTypes, typename, value, type) => {
     }else if (type.name == 'Union'){
       return validateUnion(contextTypes, type, value)
     // TYPE ALIAS (COMPLEX)
-    }else{
+    }else if(contextTypes[type.name] !== undefined){
       return validate(contextTypes, null, value, type)
+    // NONE OF THE ABOVE
+    }else{
+      throw new TypeError(`
+        ”${type.name}” does not seem to be a valid type and
+        is not mentioned in the supplied TypeMap.
+        Checked value was: ”${JSON.stringify(value)}” (${typeof value}) `)
     }
 
   }
